@@ -5,8 +5,8 @@ import subprocess
 import glob
 from subprocess import CalledProcessError
 import sys
-from os.path import isfile, islink, join
-
+from os.path import isfile, islink
+import argparse
 
 def chunk_reader(fobj, chunk_size=65536):
     """Generator that reads a file in chunks of bytes"""
@@ -35,10 +35,13 @@ def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     return hashed
 
 
-def check_for_duplicates(paths, hash=hashlib.sha1):
+def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
     hashes_by_size = {}
     hashes_on_1k = {}
     hashes_full = {}
+
+    if dry_run:
+        print ("Dry run! no change will be applied")
 
     for path in paths:
         print("Scanning %s ..." % (path)) 
@@ -108,13 +111,12 @@ def check_for_duplicates(paths, hash=hashlib.sha1):
                 hashes_full[full_hash] = []          # create the list for this 1k hash
                 hashes_full[full_hash].append(filename)
 
-    print("Found %d  clusters." % (len(hashes_full)))
-
     total_bytes = 0
     unique_bytes = 0
 
-    # Issue dedup cp's
+    # Issue dedupes
     print("Deduping...")
+        
     for full_hash, files in hashes_full.items():
         if len(files) < 2:
             continue    # this hash of fist 1k file bytes is unique, no need to spend cpu cycles on it
@@ -131,15 +133,24 @@ def check_for_duplicates(paths, hash=hashlib.sha1):
 
             print("\t%s" % (filename))
 
-            try:
-                copyCommand = subprocess.run(["cp", "-cv", duplicate, filename], stdout=subprocess.PIPE, check=True)
-                #print(copyCommand)
-            except CalledProcessError:
-                print('Could not dedupe file: %s. Skipping ...' % filename)
+            if not dry_run:
+                try:
+                    copyCommand = subprocess.run(["cp", "-cv", duplicate, filename], stdout=subprocess.PIPE, check=True)
+                    #print(copyCommand)
+                except CalledProcessError:
+                    print('Could not dedupe file: %s. Skipping ...' % filename)
 
     print("Total deduped: %d bytes" % (total_bytes - unique_bytes))
 
-if sys.argv[1:]:
-    check_for_duplicates(sys.argv[1:])
-else:
-    print("Please pass the paths to check as parameters to the script")
+
+parser = argparse.ArgumentParser(description='Deduplicate files in apfs')
+
+parser.add_argument('paths', metavar='path', nargs='+',
+                    help='paths to scan, glob accepted')
+
+parser.add_argument('--dry-run', dest='dry_run', action='store_const',
+                    const=True, default=False,
+                    help='Do not actually perform deduplication')
+
+args = parser.parse_args()    
+check_for_duplicates(args.paths, args.dry_run)
