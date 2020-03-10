@@ -141,7 +141,12 @@ def check_for_duplicates(paths, dry_run, force, hash=hashlib.sha1):
 
             if not dry_run:
                 try:
-                    copyCommand = subprocess.run(["cp", "-cv", "-f" if force else "", duplicate, filename], stdout=subprocess.PIPE, check=True)
+                    args = ["cp", "-cv"]
+                    if force: 
+                        args.append("-f")
+                    args.append(duplicate)
+                    args.append(filename)
+                    copyCommand = subprocess.run(args, stdout=subprocess.PIPE, check=True)
                     #print(copyCommand)
                 except CalledProcessError:
                     print('Could not dedupe file: %s. Skipping ...' % filename)
