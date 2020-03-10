@@ -1,6 +1,6 @@
 # README #
 
-Deduplicate files on your APFS file system (or any file system that supports cloning files via `cp -c`
+Deduplicate files on your APFS file system.
 
 ### What is this repository for? ###
 
