@@ -36,7 +36,7 @@ def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     return hashed
 
 
-def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
+def check_for_duplicates(paths, dry_run, force, hash=hashlib.sha1):
     hashes_by_size = {}
     hashes_on_1k = {}
     hashes_full = {}
@@ -117,6 +117,7 @@ def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
 
     total_bytes = 0
     unique_bytes = 0
+    total_hashes = 0
 
     # Issue dedupes
     print("Deduping...")
@@ -129,6 +130,7 @@ def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
         file_size = os.path.getsize(duplicate)
         total_bytes += file_size * len(files)
         unique_bytes += file_size
+        total_hashes += 1
         print("Hash:%s Size:%d" % (full_hash, file_size))
         for filename in files:
             if filename == duplicate:
@@ -139,11 +141,12 @@ def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
 
             if not dry_run:
                 try:
-                    copyCommand = subprocess.run(["cp", "-cv", duplicate, filename], stdout=subprocess.PIPE, check=True)
+                    copyCommand = subprocess.run(["cp", "-cv", "-f" if force else "", duplicate, filename], stdout=subprocess.PIPE, check=True)
                     #print(copyCommand)
                 except CalledProcessError:
                     print('Could not dedupe file: %s. Skipping ...' % filename)
 
+    print("Deduped %d clusters" % total_hashes)
     print("Total potential deduped: %d bytes" % (total_bytes - unique_bytes))
     post_stat = shutil.disk_usage("/")
     print("Disk Used: %d bytes  Free: %d bytes" % (post_stat.used, post_stat.free))
@@ -158,5 +161,9 @@ parser.add_argument('--dry-run', dest='dry_run', action='store_const',
                     const=True, default=False,
                     help='Do not actually perform deduplication')
 
+parser.add_argument('--force', dest='force', action='store_const',
+                    const=True, default=False,
+                    help='cp with -f')
+
 args = parser.parse_args()    
-check_for_duplicates(args.paths, args.dry_run)
+check_for_duplicates(args.paths, args.dry_run, args.force)
