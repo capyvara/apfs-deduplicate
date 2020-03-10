@@ -164,7 +164,7 @@ def check_for_duplicates(paths, dry_run, force, verbose, compare, hash=hashlib.s
                         args.append("-f")
                     args.append(duplicate)
                     args.append(filename)
-                    copyCommand = subprocess.run(args, stdout=subprocess.PIPE, check=True)
+                    copyCommand = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
                     if verbose > 1:
                         print(copyCommand)
                 except CalledProcessError:
