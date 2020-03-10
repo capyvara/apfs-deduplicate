@@ -6,6 +6,7 @@ Deduplicate files on your APFS file system.
 
 * APFS allows cloning files instead of copying them
 * This script detects duplicates and replaces them with clones
+* More information (clones): https://developer.apple.com/documentation/foundation/file_system/about_apple_file_system
 
 ### How do I use it? ###
 
