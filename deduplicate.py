@@ -7,6 +7,7 @@ from subprocess import CalledProcessError
 import sys
 from os.path import isfile, islink
 import argparse
+import shutil
 
 def chunk_reader(fobj, chunk_size=65536):
     """Generator that reads a file in chunks of bytes"""
@@ -39,9 +40,12 @@ def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
     hashes_by_size = {}
     hashes_on_1k = {}
     hashes_full = {}
+    pre_stat = shutil.disk_usage("/")
 
     if dry_run:
         print ("Dry run! no change will be applied")
+
+    print("Disk Used: %d bytes  Free: %d bytes" % (pre_stat.used, pre_stat.free))
 
     for path in paths:
         print("Scanning %s ..." % (path)) 
@@ -140,8 +144,10 @@ def check_for_duplicates(paths, dry_run, hash=hashlib.sha1):
                 except CalledProcessError:
                     print('Could not dedupe file: %s. Skipping ...' % filename)
 
-    print("Total deduped: %d bytes" % (total_bytes - unique_bytes))
-
+    print("Total potential deduped: %d bytes" % (total_bytes - unique_bytes))
+    post_stat = shutil.disk_usage("/")
+    print("Disk Used: %d bytes  Free: %d bytes" % (post_stat.used, post_stat.free))
+    print("Freed %d bytes" % (post_stat.free - pre_stat.free))
 
 parser = argparse.ArgumentParser(description='Deduplicate files in apfs')
 
