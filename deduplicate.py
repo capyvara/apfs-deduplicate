@@ -179,7 +179,9 @@ def check_for_duplicates(paths, dry_run, force, verbose, compare, hash=hashlib.s
     print("Disk Used: %d bytes  Free: %d bytes" % (post_stat.used, post_stat.free))
     print("Freed %d bytes" % (post_stat.free - pre_stat.free))
 
-parser = argparse.ArgumentParser(description='Deduplicate files in apfs')
+parser = argparse.ArgumentParser(description='Deduplicate files in apfs',
+                    formatter_class=argparse.RawDescriptionHelpFormatter,
+                    epilog="Example usage:\n./deduplicate.py 'Applications/Unity*/**'")
 
 parser.add_argument('paths', metavar='path', nargs='+',
                     help='Paths to scan, glob accepted')
