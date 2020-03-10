@@ -8,6 +8,7 @@ import sys
 from os.path import isfile, islink
 import argparse
 import shutil
+import filecmp
 
 def chunk_reader(fobj, chunk_size=65536):
     """Generator that reads a file in chunks of bytes"""
@@ -36,7 +37,7 @@ def get_hash(filename, first_chunk_only=False, hash=hashlib.sha1):
     return hashed
 
 
-def check_for_duplicates(paths, dry_run, force, verbose, hash=hashlib.sha1):
+def check_for_duplicates(paths, dry_run, force, verbose, compare, hash=hashlib.sha1):
     hashes_by_size = {}
     hashes_on_1k = {}
     hashes_full = {}
@@ -128,6 +129,7 @@ def check_for_duplicates(paths, dry_run, force, verbose, hash=hashlib.sha1):
     total_bytes = 0
     unique_bytes = 0
     total_hashes = 0
+    errors = 0
 
     # Issue dedupes
     print("Deduping...")
@@ -153,6 +155,9 @@ def check_for_duplicates(paths, dry_run, force, verbose, hash=hashlib.sha1):
                 print("\t%s" % (filename))
 
             if not dry_run:
+                if compare and not filecmp.cmp(duplicate, filename, shallow=False):
+                    continue
+
                 try:
                     args = ["cp", "-cv"]
                     if force: 
@@ -163,9 +168,12 @@ def check_for_duplicates(paths, dry_run, force, verbose, hash=hashlib.sha1):
                     if verbose > 1:
                         print(copyCommand)
                 except CalledProcessError:
-                    print('Could not dedupe file: %s. Skipping ...' % filename)
+                    errors += 1
+                    if verbose > 0:
+                        print('Could not dedupe file: %s. Skipping ...' % filename)
 
     print("Deduped %d clusters" % total_hashes)
+    print("Skipped due to errors %d files" % errors)
     print("Total potential deduped: %d bytes" % (total_bytes - unique_bytes))
     post_stat = shutil.disk_usage("/")
     print("Disk Used: %d bytes  Free: %d bytes" % (post_stat.used, post_stat.free))
@@ -188,5 +196,10 @@ parser.add_argument('--verbose', '-v', dest='verbose', action='count',
                     default=0,
                     help='Verbosity level')
 
+parser.add_argument('--compare', '-c', dest='compare', action='store_const',
+                    const=True, default=False,
+                    help='Only copy if file contents perfectly matches')
+
+
 args = parser.parse_args()    
-check_for_duplicates(args.paths, args.dry_run, args.force, args.verbose)
+check_for_duplicates(args.paths, args.dry_run, args.force, args.verbose, args.compare)
